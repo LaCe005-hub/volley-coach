@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Volley Coach</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <nav class="hauptnav">
+    <button id="nav-kader" class="nav-btn">Kader</button>
+    <button id="nav-aufstellung" class="nav-btn">Aufstellung</button>
+    <button id="nav-spiel" class="nav-btn">Spiel</button>
+  </nav>
+
+  <!-- ===================== KADER ===================== -->
+  <section id="ansicht-kader" class="ansicht">
+    <h1>Kader</h1>
+    <div class="kader-eingabe">
+      <input id="neue-nummer" type="number" min="1" max="99" placeholder="Trikotnummer" />
+      <button id="kader-hinzufuegen" class="btn">Hinzufügen</button>
+    </div>
+    <div id="kader-liste"></div>
+  </section>
+
+  <!-- ===================== AUFSTELLUNG ===================== -->
+  <section id="ansicht-aufstellung" class="ansicht">
+    <h1>Aufstellung</h1>
+    <p class="hinweis">Spieler pro Position festlegen. Position 1 ist die Aufschlagposition.</p>
+
+    <div class="aufstellung-grid">
+      <div class="aufstellung-feld"><label>Pos. 4</label><select id="pos-4"></select></div>
+      <div class="aufstellung-feld"><label>Pos. 3</label><select id="pos-3"></select></div>
+      <div class="aufstellung-feld"><label>Pos. 2</label><select id="pos-2"></select></div>
+      <div class="aufstellung-feld"><label>Pos. 5</label><select id="pos-5"></select></div>
+      <div class="aufstellung-feld"><label>Pos. 6</label><select id="pos-6"></select></div>
+      <div class="aufstellung-feld"><label>Pos. 1 ⚡</label><select id="pos-1"></select></div>
+    </div>
+
+    <div class="libero-auswahl">
+      <label>Libero</label>
+      <select id="libero-nummer"></select>
+      <label>ersetzt Spieler</label>
+      <select id="libero-ersetzt"></select>
+    </div>
+
+    <div class="aufschlag-auswahl">
+      <label><input type="radio" name="aufschlag" id="aufschlag-wir" checked /> Wir schlagen zuerst auf</label>
+      <label><input type="radio" name="aufschlag" id="aufschlag-gegner" /> Gegner schlägt zuerst auf</label>
+    </div>
+
+    <button id="aufstellung-uebernehmen" class="btn btn-gross">Aufstellung übernehmen →</button>
+  </section>
+
+  <!-- ===================== SPIEL ===================== -->
+  <section id="ansicht-spiel" class="ansicht">
+    <div class="spiel-kopf">
+      <span id="aufschlag-status" class="aufschlag-status"></span>
+      <button id="rueckgaengig" class="btn-klein">↶ Rückgängig</button>
+    </div>
+
+    <div class="court">
+      <div id="court-oben" class="court-reihe"></div>
+      <div class="netz-linie">Netz</div>
+      <div id="court-unten" class="court-reihe"></div>
+    </div>
+
+    <div class="punkt-buttons">
+      <button id="punkt-uns" class="btn btn-gross btn-erfolg">Punkt für uns</button>
+      <button id="punkt-gegner" class="btn btn-gross btn-gefahr">Punkt für Gegner</button>
+    </div>
+
+    <h2>Punktverluste in diesem Satz</h2>
+    <div id="fehler-log"></div>
+
+    <button id="neuer-satz" class="btn-klein">Neuer Satz</button>
+  </section>
+
+  <!-- ===================== FEHLER-DIALOG ===================== -->
+  <div id="fehler-dialog" class="dialog">
+    <div class="dialog-inhalt">
+      <h2>Punktverlust erfassen</h2>
+      <p class="hinweis">Wer hat den Fehler gemacht?</p>
+      <div id="fehler-spieler-liste" class="fehler-spieler-liste"></div>
+      <p class="hinweis">Welcher Fehler war es?</p>
+      <div class="fehler-grund-buttons">
+        <button class="btn-klein" data-grund="Aufschlag">Aufschlag</button>
+        <button class="btn-klein" data-grund="Annahme">Annahme</button>
+        <button class="btn-klein" data-grund="Angriff">Angriff</button>
+        <button class="btn-klein" data-grund="Block">Block</button>
+        <button class="btn-klein" data-grund="Netz">Netz</button>
+        <button class="btn-klein" data-grund="Sonstige">Sonstige</button>
+      </div>
+      <button id="fehler-abbrechen" class="btn-klein">Abbrechen</button>
+    </div>
+  </div>
+
+  <script src="rotation.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

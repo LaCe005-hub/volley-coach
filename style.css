@@ -1,0 +1,318 @@
+/* style.css — mobile-first, große Tap-Flächen (Bedienung während des Spiels) */
+
+:root {
+  --farbe-hintergrund: #0f172a;
+  --farbe-flaeche: #1e293b;
+  --farbe-text: #f1f5f9;
+  --farbe-hinweis: #94a3b8;
+  --farbe-akzent: #3b82f6;
+  --farbe-erfolg: #16a34a;
+  --farbe-gefahr: #dc2626;
+  --farbe-libero: #f59e0b;
+  --rand-radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--farbe-hintergrund);
+  color: var(--farbe-text);
+  font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1 {
+  font-size: 1.3rem;
+  margin: 1rem 0 0.5rem;
+}
+
+h2 {
+  font-size: 1.05rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.hinweis {
+  color: var(--farbe-hinweis);
+  font-size: 0.9rem;
+}
+
+/* ---------- Navigation ---------- */
+
+.hauptnav {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--farbe-flaeche);
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 0.9rem 0;
+  background: none;
+  border: none;
+  color: var(--farbe-hinweis);
+  font-size: 1rem;
+  border-bottom: 3px solid transparent;
+}
+
+.nav-btn.aktiv {
+  color: var(--farbe-text);
+  border-bottom-color: var(--farbe-akzent);
+}
+
+/* ---------- Ansichten ---------- */
+
+.ansicht {
+  display: none;
+  padding: 0.75rem 1rem 2rem;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.ansicht.aktiv {
+  display: block;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  padding: 0.8rem 1rem;
+  border: none;
+  border-radius: var(--rand-radius);
+  background: var(--farbe-akzent);
+  color: white;
+  font-size: 1rem;
+}
+
+.btn-gross {
+  width: 100%;
+  padding: 1.1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.btn-erfolg {
+  background: var(--farbe-erfolg);
+}
+
+.btn-gefahr {
+  background: var(--farbe-gefahr);
+}
+
+.btn-klein {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #334155;
+  border-radius: var(--rand-radius);
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font-size: 0.9rem;
+  margin: 0.2rem;
+}
+
+.btn-klein.ausgewaehlt {
+  background: var(--farbe-akzent);
+  border-color: var(--farbe-akzent);
+}
+
+/* ---------- Kader ---------- */
+
+.kader-eingabe {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.kader-eingabe input {
+  flex: 1;
+  padding: 0.7rem;
+  border-radius: var(--rand-radius);
+  border: 1px solid #334155;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font-size: 1rem;
+}
+
+.kader-zeile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #1f2d41;
+}
+
+.kader-nummer {
+  font-weight: 600;
+  min-width: 2.5rem;
+}
+
+.kader-libero-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--farbe-hinweis);
+}
+
+/* ---------- Aufstellung ---------- */
+
+.aufstellung-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.aufstellung-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.aufstellung-feld label {
+  font-size: 0.8rem;
+  color: var(--farbe-hinweis);
+}
+
+select {
+  padding: 0.6rem;
+  border-radius: var(--rand-radius);
+  border: 1px solid #334155;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font-size: 1rem;
+}
+
+.libero-auswahl,
+.aufschlag-auswahl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1rem 0;
+}
+
+.libero-auswahl label {
+  font-size: 0.85rem;
+  color: var(--farbe-hinweis);
+}
+
+/* ---------- Spielfeld ---------- */
+
+.spiel-kopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+.aufschlag-status {
+  font-weight: 600;
+}
+
+.court {
+  background: #14532d;
+  border-radius: var(--rand-radius);
+  padding: 0.75rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.court-reihe {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.netz-linie {
+  text-align: center;
+  color: #bbf7d0;
+  font-size: 0.75rem;
+  padding: 0.3rem 0;
+  letter-spacing: 0.1em;
+}
+
+.court-kachel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  aspect-ratio: 1;
+  border: none;
+  border-radius: var(--rand-radius);
+  background: #1e293b;
+  color: var(--farbe-text);
+}
+
+.court-kachel.aufschlag-position {
+  box-shadow: inset 0 0 0 3px var(--farbe-akzent);
+}
+
+.court-kachel.libero-aktiv {
+  background: #78350f;
+  box-shadow: inset 0 0 0 3px var(--farbe-libero);
+}
+
+.court-nummer {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.court-position {
+  font-size: 0.7rem;
+  color: var(--farbe-hinweis);
+}
+
+.court-libero-markierung {
+  font-size: 0.65rem;
+  color: var(--farbe-libero);
+  font-weight: 600;
+}
+
+.punkt-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+
+/* ---------- Fehler-Log ---------- */
+
+.fehler-zeile {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #1f2d41;
+  font-size: 0.9rem;
+}
+
+/* ---------- Dialog ---------- */
+
+.dialog {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 20;
+}
+
+.dialog.aktiv {
+  display: flex;
+}
+
+.dialog-inhalt {
+  background: var(--farbe-flaeche);
+  width: 100%;
+  max-width: 480px;
+  border-radius: var(--rand-radius) var(--rand-radius) 0 0;
+  padding: 1rem;
+}
+
+.fehler-spieler-liste,
+.fehler-grund-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
