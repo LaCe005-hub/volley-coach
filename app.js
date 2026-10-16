@@ -290,6 +290,7 @@ function renderSpielfeld() {
       const info = anzeige[index];
       const kachel = document.createElement("button");
       kachel.className = "court-kachel";
+      kachel.dataset.index = String(index);
 
       // Farbe nach Rolle des gerade angezeigten Spielers (bei aktivem Libero
       // also die Libero-Farbe, sonst die Rolle des Original-Spielers).
@@ -390,17 +391,25 @@ function spielerWechseln(index) {
   renderSpielfeld();
 }
 
-// ---------- Libero: Icon an der Seite, Tausch per Antippen ----------
+// ---------- Libero: Icon an der Seite, Tausch per Antippen ODER Ziehen ----------
 // Reine Anzeige-Überlagerung (satz.liberoImFeld) — "positionen" (die echte
-// Rotation) wird dabei NIE verändert. Bedienung: Icon antippen scharf
-// machen ("bereit"), dann eine Positions-Kachel antippen → Libero steht
-// dort. Icon nochmal antippen tauscht ihn zurück. Bei jeder tatsächlichen
-// Rotation wird die Überlagerung automatisch gelöscht (siehe
-// rotationAnwenden), damit nie ein veralteter Platz stehen bleibt — Icon
-// einfach erneut antippen, falls der Libero wieder gebraucht wird.
+// Rotation) wird dabei NIE verändert. Zwei Bedienwege, beide führen zum
+// selben Ergebnis:
+//   a) Antippen: Icon antippen scharf machen ("bereit"), dann eine
+//      Positions-Kachel antippen → Libero steht dort. Icon nochmal
+//      antippen tauscht ihn zurück.
+//   b) Ziehen: Icon mit dem Finger auf eine Positions-Kachel ziehen und
+//      loslassen → Libero steht dort, ohne Zwischenschritt. Außerhalb
+//      jeder Kachel loslassen, während der Libero schon im Feld steht,
+//      tauscht ihn zurück.
+// Bei jeder tatsächlichen Rotation wird die Überlagerung automatisch
+// gelöscht (siehe rotationAnwenden), damit nie ein veralteter Platz stehen
+// bleibt — Icon einfach erneut antippen/ziehen, falls der Libero wieder
+// gebraucht wird.
 
 let liberoModusAktiv = false; // transient, nicht gespeichert
 let liberoGewaehlteNummer = null; // transient, nicht gespeichert
+let liberoZiehenStatus = null; // transient: {ghost, startX, startY, bewegt, letzteKachel} während des Ziehens
 
 function liberoKandidaten() {
   return zustand.kader.filter((s) => s.rolle === "Libero");
@@ -455,6 +464,101 @@ function liberoAufPositionSetzen(index) {
   liberoModusAktiv = false;
   speichern();
   renderSpielfeld();
+}
+
+// ---- Ziehen (Pointer Events — funktioniert gleich für Finger und Maus) ----
+
+function liberoIconPointerDown(e) {
+  if (zustand.satz.beendet) return;
+  e.preventDefault();
+
+  // Welche Libero-Nummer wird gezogen? Bei mehreren Liberos im Kader einmal
+  // kurz nachfragen (bricht das Ziehen dann aber nicht ab, läuft danach normal weiter).
+  let nummer;
+  if (zustand.satz.liberoImFeld) {
+    nummer = zustand.satz.liberoImFeld.liberoNummer;
+  } else {
+    const kandidaten = liberoKandidaten();
+    if (kandidaten.length === 0) {
+      alert("Kein Spieler im Kader hat die Rolle 'Libero'.");
+      return;
+    }
+    nummer = kandidaten[0].nummer;
+    if (kandidaten.length > 1) {
+      const eingabe = prompt("Welcher Libero? (" + kandidaten.map((s) => s.nummer).join(", ") + ")", nummer);
+      if (eingabe === null) return;
+      const nr = parseInt(eingabe, 10);
+      if (!kandidaten.some((s) => s.nummer === nr)) {
+        alert("Unbekannte Libero-Nummer.");
+        return;
+      }
+      nummer = nr;
+    }
+  }
+
+  const ghost = document.createElement("div");
+  ghost.className = "libero-ghost";
+  ghost.textContent = "#" + nummer;
+  document.body.appendChild(ghost);
+
+  liberoZiehenStatus = { ghost, nummer, startX: e.clientX, startY: e.clientY, bewegt: false, letzteKachel: null };
+  liberoGhostPositionieren(e.clientX, e.clientY);
+
+  document.addEventListener("pointermove", liberoIconPointerMove);
+  document.addEventListener("pointerup", liberoIconPointerUp);
+}
+
+function liberoGhostPositionieren(x, y) {
+  if (!liberoZiehenStatus) return;
+  liberoZiehenStatus.ghost.style.left = x + "px";
+  liberoZiehenStatus.ghost.style.top = y + "px";
+}
+
+function liberoIconPointerMove(e) {
+  if (!liberoZiehenStatus) return;
+  const dx = e.clientX - liberoZiehenStatus.startX;
+  const dy = e.clientY - liberoZiehenStatus.startY;
+  if (Math.abs(dx) > 6 || Math.abs(dy) > 6) liberoZiehenStatus.bewegt = true;
+  liberoGhostPositionieren(e.clientX, e.clientY);
+
+  // Ghost selbst hat pointer-events:none (siehe style.css), daher findet
+  // elementFromPoint trotz des Ghosts darunter die echte Positions-Kachel.
+  const ziel = document.elementFromPoint(e.clientX, e.clientY);
+  const kachel = ziel ? ziel.closest(".court-kachel") : null;
+  if (liberoZiehenStatus.letzteKachel && liberoZiehenStatus.letzteKachel !== kachel) {
+    liberoZiehenStatus.letzteKachel.classList.remove("drag-ueber");
+  }
+  if (kachel) kachel.classList.add("drag-ueber");
+  liberoZiehenStatus.letzteKachel = kachel;
+}
+
+function liberoIconPointerUp() {
+  if (!liberoZiehenStatus) return;
+  document.removeEventListener("pointermove", liberoIconPointerMove);
+  document.removeEventListener("pointerup", liberoIconPointerUp);
+
+  const { ghost, nummer, bewegt, letzteKachel } = liberoZiehenStatus;
+  if (letzteKachel) letzteKachel.classList.remove("drag-ueber");
+  ghost.remove();
+  liberoZiehenStatus = null;
+
+  if (!bewegt) {
+    // Kaum bewegt -> als normales Antippen behandeln (gewohnter Zwei-Schritt-Modus).
+    liberoIconKlick();
+    return;
+  }
+
+  if (letzteKachel) {
+    liberoGewaehlteNummer = nummer;
+    liberoAufPositionSetzen(parseInt(letzteKachel.dataset.index, 10));
+  } else if (zustand.satz.liberoImFeld) {
+    // Außerhalb jeder Position losgelassen, während der Libero im Feld
+    // stand -> zurücktauschen.
+    sichereHistorie();
+    zustand.satz.liberoImFeld = null;
+    speichern();
+    renderSpielfeld();
+  }
 }
 
 function renderLiberoIcon() {
@@ -748,7 +852,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (btn) btn.addEventListener("click", () => fehlerBestaetigen(grund));
   }
 
-  document.getElementById("libero-icon").addEventListener("click", liberoIconKlick);
+  document.getElementById("libero-icon").addEventListener("pointerdown", liberoIconPointerDown);
 
   document.getElementById("rueckgaengig").addEventListener("click", rueckgaengig);
   document.getElementById("neuer-satz").addEventListener("click", neuerSatz);

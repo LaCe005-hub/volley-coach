@@ -427,6 +427,8 @@ select {
   color: var(--farbe-libero);
   font-weight: 700;
   font-size: 1rem;
+  touch-action: none; /* verhindert, dass das Ziehen die Seite scrollt */
+  user-select: none;
 }
 
 .libero-icon.bereit {
@@ -444,6 +446,35 @@ select {
 .libero-icon-label {
   font-size: 0.65rem;
   color: var(--farbe-hinweis);
+}
+
+/* "Geist"-Icon, das beim Ziehen dem Finger/Mauszeiger folgt. pointer-events:
+   none ist Pflicht, sonst findet elementFromPoint beim Ziehen immer nur den
+   Ghost selbst statt der Positions-Kachel darunter. */
+.libero-ghost {
+  position: fixed;
+  z-index: 30;
+  width: 3.4rem;
+  height: 3.4rem;
+  margin-left: -1.7rem;
+  margin-top: -1.7rem;
+  border-radius: 50%;
+  background: var(--farbe-libero);
+  color: var(--farbe-hintergrund);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  pointer-events: none;
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Positions-Kachel, über der der Libero gerade beim Ziehen schwebt. */
+.court-kachel.drag-ueber {
+  box-shadow: inset 0 0 0 4px var(--farbe-text);
+  transform: scale(1.04);
 }
 
 .punkt-buttons {
