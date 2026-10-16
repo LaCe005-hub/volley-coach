@@ -81,3 +81,15 @@ function berechneAnzeige(positionen, libero) {
     };
   });
 }
+
+// "Läufer X" ist eine gängige Trainer-Bezeichnung für die Rotation: X ist die
+// Position, auf der aktuell der Zuspieler steht. Damit weiß man sofort, in
+// welcher der 6 Rotationen man gerade spielt, ohne die ganze Aufstellung
+// ablesen zu müssen.
+// Gibt die Positionsnummer (1-6) zurück, oder null, wenn der Zuspieler nicht
+// in der aktuellen Aufstellung steht (z. B. weil er ausgewechselt wurde).
+function berechneLaeufer(positionen, zuspielerNummer) {
+  if (!zuspielerNummer) return null;
+  const index = positionen.indexOf(zuspielerNummer);
+  return index === -1 ? null : index + 1;
+}

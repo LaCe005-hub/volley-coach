@@ -9,7 +9,7 @@ const FEHLER_GRUENDE = ["Aufschlag", "Annahme", "Angriff", "Block", "Netz", "Son
 
 function leererZustand() {
   return {
-    kader: [], // [{nummer, istLibero}]
+    kader: [], // [{nummer, istLibero, istZuspieler}]
     satz: {
       positionen: [null, null, null, null, null, null],
       libero: null, // {liberoNummer, ersetztSpieler}
@@ -102,6 +102,20 @@ function renderKader() {
     liberoLabel.appendChild(liberoCheckbox);
     liberoLabel.appendChild(document.createTextNode(" Libero"));
     zeile.appendChild(liberoLabel);
+
+    const zuspielerLabel = document.createElement("label");
+    zuspielerLabel.className = "kader-libero-label";
+    const zuspielerCheckbox = document.createElement("input");
+    zuspielerCheckbox.type = "checkbox";
+    zuspielerCheckbox.checked = !!spieler.istZuspieler;
+    zuspielerCheckbox.addEventListener("change", () => {
+      spieler.istZuspieler = zuspielerCheckbox.checked;
+      speichern();
+      renderSpielfeld();
+    });
+    zuspielerLabel.appendChild(zuspielerCheckbox);
+    zuspielerLabel.appendChild(document.createTextNode(" Zuspieler"));
+    zeile.appendChild(zuspielerLabel);
 
     const entfernenBtn = document.createElement("button");
     entfernenBtn.className = "btn-klein btn-gefahr";
@@ -278,6 +292,15 @@ function renderSpielfeld() {
   document.getElementById("aufschlag-status").textContent = zustand.satz.wirAmAufschlag
     ? "Wir schlagen auf"
     : "Gegner schlägt auf";
+
+  const zuspieler = zustand.kader.find((s) => s.istZuspieler);
+  const laeuferEl = document.getElementById("laeufer-status");
+  if (!zuspieler) {
+    laeuferEl.textContent = "";
+  } else {
+    const laeufer = berechneLaeufer(zustand.satz.positionen, zuspieler.nummer);
+    laeuferEl.textContent = laeufer ? "Läufer " + laeufer : "Zuspieler (#" + zuspieler.nummer + ") nicht auf dem Feld";
+  }
 }
 
 function spielerWechseln(index) {
