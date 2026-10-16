@@ -42,16 +42,16 @@
       <div class="aufstellung-feld"><label>Pos. 1 ⚡</label><select id="pos-1"></select></div>
     </div>
 
-    <div class="libero-auswahl">
-      <label>Libero</label>
-      <select id="libero-nummer"></select>
-      <label>ersetzt Spieler</label>
-      <select id="libero-ersetzt"></select>
-    </div>
+    <p class="hinweis">Den Libero tauschst du live im Spiel ein — dafür musst du hier nichts einstellen.</p>
 
     <div class="aufschlag-auswahl">
       <label><input type="radio" name="aufschlag" id="aufschlag-wir" checked /> Wir schlagen zuerst auf</label>
       <label><input type="radio" name="aufschlag" id="aufschlag-gegner" /> Gegner schlägt zuerst auf</label>
+    </div>
+
+    <div class="zielpunktzahl-feld">
+      <label for="zielpunktzahl">Punkte zum Satzgewinn (25, im Entscheidungssatz meist 15)</label>
+      <input type="number" id="zielpunktzahl" min="1" max="99" value="25" />
     </div>
 
     <button id="aufstellung-uebernehmen" class="btn btn-gross">Aufstellung übernehmen →</button>
@@ -61,11 +61,14 @@
   <section id="ansicht-spiel" class="ansicht">
     <div class="spiel-kopf">
       <div>
+        <span id="punktestand" class="punktestand"></span>
         <span id="aufschlag-status" class="aufschlag-status"></span>
         <span id="laeufer-status" class="laeufer-status"></span>
       </div>
       <button id="rueckgaengig" class="btn-klein">↶ Rückgängig</button>
     </div>
+
+    <div id="satz-ende-banner" class="satz-ende-banner"></div>
 
     <div class="court">
       <div id="court-oben" class="court-reihe"></div>
@@ -73,7 +76,14 @@
       <div id="court-unten" class="court-reihe"></div>
     </div>
 
-    <div class="punkt-buttons">
+    <div class="libero-kontrollen">
+      <span id="libero-status" class="libero-status"></span>
+      <button id="libero-rein" class="btn-klein">Libero rein</button>
+      <button id="libero-raus" class="btn-klein">Libero raus</button>
+      <button id="libero-verschieben" class="btn-klein">Libero verschieben</button>
+    </div>
+
+    <div id="punkt-buttons" class="punkt-buttons">
       <button id="punkt-uns" class="btn btn-gross btn-erfolg">Punkt für uns</button>
       <button id="punkt-gegner" class="btn btn-gross btn-gefahr">Punkt für Gegner</button>
     </div>
@@ -97,6 +107,8 @@
         <button class="btn-klein" data-grund="Angriff">Angriff</button>
         <button class="btn-klein" data-grund="Block">Block</button>
         <button class="btn-klein" data-grund="Netz">Netz</button>
+        <button class="btn-klein" data-grund="Kommunikation">Kommunikation</button>
+        <button class="btn-klein" data-grund="Unglück">Unglück</button>
         <button class="btn-klein" data-grund="Sonstige">Sonstige</button>
       </div>
       <button id="fehler-abbrechen" class="btn-klein">Abbrechen</button>

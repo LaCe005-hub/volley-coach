@@ -9,19 +9,6 @@
 // Position 4 (Index 3) = Vorne links
 // Position 5 (Index 4) = Hinten links
 // Position 6 (Index 5) = Hinten Mitte
-//
-// Hinterfeld = Index 0, 4, 5 (Positionen 1, 5, 6)
-// Vorderfeld = Index 1, 2, 3 (Positionen 2, 3, 4)
-
-const HINTERFELD_INDIZES = [0, 4, 5];
-
-function istHinterfeld(index) {
-  return HINTERFELD_INDIZES.includes(index);
-}
-
-function istAufschlagPosition(index) {
-  return index === 0;
-}
 
 // Rotiert die Aufstellung einmal im Uhrzeigersinn (Spieler auf Position 2
 // rückt auf Position 1 usw., Spieler auf Position 1 geht auf Position 6).
@@ -29,67 +16,66 @@ function rotiereAufstellung(positionen) {
   return positionen.slice(1).concat(positionen[0]);
 }
 
-// Wird nach jedem Punkt aufgerufen. Gibt die neue Aufstellung + den neuen
-// Aufschlag-Status zurück. Rotiert wird nur, wenn die eigene Mannschaft
-// den Aufschlag NEU gewinnt (Seitenwechsel zu uns), nicht bei jedem Punkt
-// im eigenen Aufschlag und nicht, wenn wir den Punkt verlieren.
+// Wird nach jedem Punkt aufgerufen. Gibt die neue Aufstellung, den neuen
+// Aufschlag-Status und ob dabei tatsächlich rotiert wurde zurück. Rotiert
+// wird nur, wenn die eigene Mannschaft den Aufschlag NEU gewinnt
+// (Seitenwechsel zu uns), nicht bei jedem Punkt im eigenen Aufschlag und
+// nicht, wenn wir den Punkt verlieren.
 function naechsterZustandNachPunkt(positionen, wirAmAufschlag, punktFuerUns) {
   if (punktFuerUns) {
     if (wirAmAufschlag) {
       // Wir schlagen weiter auf, keine Rotation.
-      return { positionen, wirAmAufschlag: true };
+      return { positionen, wirAmAufschlag: true, rotiert: false };
     }
     // Seitenwechsel zu uns: einmal rotieren, dann aufschlagen.
-    return { positionen: rotiereAufstellung(positionen), wirAmAufschlag: true };
+    return { positionen: rotiereAufstellung(positionen), wirAmAufschlag: true, rotiert: true };
   }
   if (wirAmAufschlag) {
     // Wir verlieren den Punkt im eigenen Aufschlag: Seitenwechsel zum Gegner,
     // wir rotieren nicht.
-    return { positionen, wirAmAufschlag: false };
+    return { positionen, wirAmAufschlag: false, rotiert: false };
   }
   // Gegner schlägt weiter auf, keine Rotation.
-  return { positionen, wirAmAufschlag: false };
+  return { positionen, wirAmAufschlag: false, rotiert: false };
 }
 
-// Berechnet, was auf jeder der 6 Positionen tatsächlich angezeigt werden
-// soll — inklusive automatischer Libero-Logik (klassische Regel: Libero
-// schlägt nie auf).
+// Was auf jeder der 6 Positionen angezeigt wird. Der Libero ist eine reine
+// Anzeige-Überlagerung (liberoImFeld), die Aufstellung (positionen) selbst
+// wird davon nie verändert — der Trainer tauscht den Libero manuell rein
+// und raus, unabhängig von der Rotation.
 //
-// libero: { liberoNummer, ersetztSpieler } oder null
-function berechneAnzeige(positionen, libero) {
+// liberoImFeld: { positionIndex, liberoNummer } oder null
+function berechneAnzeige(positionen, liberoImFeld) {
   return positionen.map((spielerNummer, index) => {
-    let anzeigeNummer = spielerNummer;
-    let liberoAktiv = false;
-
-    if (libero && libero.ersetztSpieler === spielerNummer) {
-      const liberoDarfHierStehen = istHinterfeld(index) && !istAufschlagPosition(index);
-      if (liberoDarfHierStehen) {
-        anzeigeNummer = libero.liberoNummer;
-        liberoAktiv = true;
-      }
-      // Vorderfeld oder Aufschlagposition: Originalspieler bleibt sichtbar,
-      // der Libero sitzt in diesem Moment "draußen".
-    }
-
+    const liberoHier = !!(liberoImFeld && liberoImFeld.positionIndex === index);
     return {
       position: index + 1,
       originalSpieler: spielerNummer,
-      anzeigeNummer,
-      liberoAktiv,
-      istHinterfeld: istHinterfeld(index),
-      istAufschlagPosition: istAufschlagPosition(index),
+      anzeigeNummer: liberoHier ? liberoImFeld.liberoNummer : spielerNummer,
+      liberoAktiv: liberoHier,
+      istAufschlagPosition: index === 0,
     };
   });
 }
 
 // "Läufer X" ist eine gängige Trainer-Bezeichnung für die Rotation: X ist die
-// Position, auf der aktuell der Zuspieler steht. Damit weiß man sofort, in
-// welcher der 6 Rotationen man gerade spielt, ohne die ganze Aufstellung
-// ablesen zu müssen.
+// Position, auf der aktuell der Zuspieler steht (in der echten Aufstellung,
+// unabhängig von einer eventuellen Libero-Überlagerung). Damit weiß man
+// sofort, in welcher der 6 Rotationen man gerade spielt.
 // Gibt die Positionsnummer (1-6) zurück, oder null, wenn der Zuspieler nicht
 // in der aktuellen Aufstellung steht (z. B. weil er ausgewechselt wurde).
 function berechneLaeufer(positionen, zuspielerNummer) {
   if (!zuspielerNummer) return null;
   const index = positionen.indexOf(zuspielerNummer);
   return index === -1 ? null : index + 1;
+}
+
+// Ein Satz ist beendet, wenn eine Mannschaft die Zielpunktzahl erreicht hat
+// UND mindestens 2 Punkte Vorsprung hat (Standard-Volleyball-Regel). Für den
+// entscheidenden 5. Satz kann die Zielpunktzahl auf 15 gesetzt werden statt
+// der üblichen 25 — das stellt der Trainer in der Aufstellung-Ansicht ein.
+function satzIstBeendet(punkteWir, punkteGegner, zielPunktzahl) {
+  const fuehrenderVorsprung = Math.abs(punkteWir - punkteGegner);
+  const hoechsterStand = Math.max(punkteWir, punkteGegner);
+  return hoechsterStand >= zielPunktzahl && fuehrenderVorsprung >= 2;
 }

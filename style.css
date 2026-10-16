@@ -10,7 +10,18 @@
   --farbe-erfolg: #166534; /* dunkleres Grün, selbe Begründung */
   --farbe-gefahr: #b91c1c; /* dunkleres Rot, selbe Begründung */
   --farbe-libero: #f59e0b;
+  --farbe-zuspieler: #22d3ee;
   --rand-radius: 10px;
+
+  /* Je eine eigene, aber ähnlich dunkle Farbe pro Feldposition (alle geben
+     auf weißem Text min. 4,5:1 Kontrast), damit man die Positionen auf
+     einen Blick unterscheidet. */
+  --farbe-pos-1: #1e3a8a;
+  --farbe-pos-2: #6d28d9;
+  --farbe-pos-3: #0f766e;
+  --farbe-pos-4: #9d174d;
+  --farbe-pos-5: #854d0e;
+  --farbe-pos-6: #4338ca;
 }
 
 * {
@@ -151,12 +162,16 @@ h2 {
   min-width: 2.5rem;
 }
 
-.kader-libero-label {
-  flex: 1;
+.kader-zeile .btn-gefahr {
+  margin-left: auto;
+}
+
+.kader-markierung-label {
   display: flex;
   align-items: center;
   gap: 0.3rem;
   color: var(--farbe-hinweis);
+  font-size: 0.85rem;
 }
 
 /* ---------- Aufstellung ---------- */
@@ -188,7 +203,6 @@ select {
   font-size: 1rem;
 }
 
-.libero-auswahl,
 .aufschlag-auswahl {
   display: flex;
   flex-direction: column;
@@ -196,9 +210,25 @@ select {
   margin: 1rem 0;
 }
 
-.libero-auswahl label {
+.zielpunktzahl-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 1rem 0;
+}
+
+.zielpunktzahl-feld label {
   font-size: 0.85rem;
   color: var(--farbe-hinweis);
+}
+
+.zielpunktzahl-feld input {
+  padding: 0.6rem;
+  border-radius: var(--rand-radius);
+  border: 1px solid #334155;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font-size: 1rem;
 }
 
 /* ---------- Spielfeld ---------- */
@@ -210,6 +240,12 @@ select {
   margin: 0.5rem 0;
 }
 
+.punktestand {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
 .aufschlag-status {
   font-weight: 600;
 }
@@ -219,6 +255,25 @@ select {
   font-size: 0.85rem;
   color: var(--farbe-akzent);
   font-weight: 600;
+}
+
+.satz-ende-banner {
+  display: none;
+  text-align: center;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  border-radius: var(--rand-radius);
+  background: var(--farbe-knopf);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.satz-ende-banner.aktiv {
+  display: block;
+}
+
+.punkt-buttons.ausgeblendet {
+  display: none;
 }
 
 .court {
@@ -251,17 +306,38 @@ select {
   aspect-ratio: 1;
   border: none;
   border-radius: var(--rand-radius);
-  background: #1e293b;
   color: var(--farbe-text);
 }
 
+/* Jede Position hat ihre eigene Farbe, damit man sie auf einen Blick
+   unterscheidet (Schiedsrichter-/Trainer-Konvention: Position 1 = Aufschlag). */
+.court-kachel.pos-1 { background: var(--farbe-pos-1); }
+.court-kachel.pos-2 { background: var(--farbe-pos-2); }
+.court-kachel.pos-3 { background: var(--farbe-pos-3); }
+.court-kachel.pos-4 { background: var(--farbe-pos-4); }
+.court-kachel.pos-5 { background: var(--farbe-pos-5); }
+.court-kachel.pos-6 { background: var(--farbe-pos-6); }
+
+/* Aufschlagposition: heller Rand, unabhängig von der Positionsfarbe sichtbar. */
 .court-kachel.aufschlag-position {
-  box-shadow: inset 0 0 0 3px var(--farbe-akzent);
+  box-shadow: inset 0 0 0 3px var(--farbe-text);
 }
 
+/* Libero und Zuspieler sollen über der Positionsfarbe deutlich hervorstechen —
+   dicker, kräftig gefärbter Rand statt Hintergrundfarbe, damit die
+   Positionsfarbe weiterhin erkennbar bleibt. */
 .court-kachel.libero-aktiv {
-  background: #78350f;
-  box-shadow: inset 0 0 0 3px var(--farbe-libero);
+  box-shadow: inset 0 0 0 4px var(--farbe-libero);
+}
+
+.court-kachel.zuspieler-aktiv {
+  box-shadow: inset 0 0 0 4px var(--farbe-zuspieler);
+}
+
+/* Seltener Fall: Libero steht zufällig genau auf der Position, die der
+   Zuspieler in der Hauptaufstellung hätte — beide Ränder übereinander. */
+.court-kachel.libero-aktiv.zuspieler-aktiv {
+  box-shadow: inset 0 0 0 4px var(--farbe-libero), inset 0 0 0 8px var(--farbe-zuspieler);
 }
 
 .court-nummer {
@@ -271,11 +347,34 @@ select {
 
 .court-position {
   font-size: 0.7rem;
-  color: var(--farbe-hinweis);
+  color: var(--farbe-text);
+  opacity: 0.85;
 }
 
-.court-libero-markierung {
+.court-markierung {
   font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.court-markierung-libero {
+  color: var(--farbe-libero);
+}
+
+.court-markierung-zuspieler {
+  color: var(--farbe-zuspieler);
+}
+
+.libero-kontrollen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.75rem 0;
+}
+
+.libero-status {
+  width: 100%;
+  font-size: 0.85rem;
   color: var(--farbe-libero);
   font-weight: 600;
 }

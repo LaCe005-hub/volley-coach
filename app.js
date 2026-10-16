@@ -3,7 +3,8 @@
 // gespeichert, kein Server nötig.
 
 const SPEICHER_SCHLUESSEL = "volleyCoachState";
-const FEHLER_GRUENDE = ["Aufschlag", "Annahme", "Angriff", "Block", "Netz", "Sonstige"];
+const FEHLER_GRUENDE = ["Aufschlag", "Annahme", "Angriff", "Block", "Netz", "Kommunikation", "Unglück", "Sonstige"];
+const ZIELPUNKTZAHL_STANDARD = 25;
 
 // ---------- Zustand ----------
 
@@ -12,8 +13,11 @@ function leererZustand() {
     kader: [], // [{nummer, istLibero, istZuspieler}]
     satz: {
       positionen: [null, null, null, null, null, null],
-      libero: null, // {liberoNummer, ersetztSpieler}
+      liberoImFeld: null, // {positionIndex, liberoNummer} — reine Anzeige-Überlagerung, rührt "positionen" nie an
       wirAmAufschlag: true,
+      punkte: { wir: 0, gegner: 0 },
+      zielPunktzahl: ZIELPUNKTZAHL_STANDARD,
+      beendet: false, // true, sobald die Zielpunktzahl mit 2 Punkten Vorsprung erreicht ist
       fehler: [], // [{nummer, grund, zeit}]
       laeuft: false, // true, sobald die Aufstellung übernommen wurde
     },
@@ -29,7 +33,8 @@ function ladeZustand() {
     if (!roh) return leererZustand();
     const geladen = JSON.parse(roh);
     // Fehlende Felder auffüllen, falls sich das Format mal ändert.
-    return { ...leererZustand(), ...geladen };
+    const basis = leererZustand();
+    return { ...basis, ...geladen, satz: { ...basis.satz, ...(geladen.satz || {}) } };
   } catch (e) {
     console.warn("Konnte gespeicherten Zustand nicht laden, starte neu.", e);
     return leererZustand();
@@ -90,21 +95,20 @@ function renderKader() {
     zeile.appendChild(nummer);
 
     const liberoLabel = document.createElement("label");
-    liberoLabel.className = "kader-libero-label";
+    liberoLabel.className = "kader-markierung-label";
     const liberoCheckbox = document.createElement("input");
     liberoCheckbox.type = "checkbox";
-    liberoCheckbox.checked = spieler.istLibero;
+    liberoCheckbox.checked = !!spieler.istLibero;
     liberoCheckbox.addEventListener("change", () => {
       spieler.istLibero = liberoCheckbox.checked;
       speichern();
-      renderAufstellungOptionen();
     });
     liberoLabel.appendChild(liberoCheckbox);
     liberoLabel.appendChild(document.createTextNode(" Libero"));
     zeile.appendChild(liberoLabel);
 
     const zuspielerLabel = document.createElement("label");
-    zuspielerLabel.className = "kader-libero-label";
+    zuspielerLabel.className = "kader-markierung-label";
     const zuspielerCheckbox = document.createElement("input");
     zuspielerCheckbox.type = "checkbox";
     zuspielerCheckbox.checked = !!spieler.istZuspieler;
@@ -143,7 +147,7 @@ function kaderSpielerHinzufuegen() {
     alert("Diese Nummer ist schon im Kader.");
     return;
   }
-  zustand.kader.push({ nummer, istLibero: false });
+  zustand.kader.push({ nummer, istLibero: false, istZuspieler: false });
   zustand.kader.sort((a, b) => a.nummer - b.nummer);
   speichern();
   eingabe.value = "";
@@ -154,12 +158,13 @@ function kaderSpielerHinzufuegen() {
 // ---------- Aufstellung-Ansicht ----------
 
 function renderAufstellungOptionen() {
-  // 6 Positions-Dropdowns mit allen Kader-Spielern befüllen.
+  // 6 Positions-Dropdowns mit allen Kader-Spielern befüllen (Libero steht
+  // hier nicht zur Wahl — der kommt erst live im Spiel per Tausch dazu).
   for (let i = 0; i < 6; i++) {
     const select = document.getElementById("pos-" + (i + 1));
     const aktuelleAuswahl = select.value;
     select.innerHTML = '<option value="">—</option>';
-    for (const spieler of zustand.kader) {
+    for (const spieler of zustand.kader.filter((s) => !s.istLibero)) {
       const option = document.createElement("option");
       option.value = spieler.nummer;
       option.textContent = "#" + spieler.nummer;
@@ -167,18 +172,6 @@ function renderAufstellungOptionen() {
     }
     if (aktuelleAuswahl) select.value = aktuelleAuswahl;
   }
-
-  // Libero-Dropdown: nur Spieler, die als Libero markiert sind.
-  const liberoSelect = document.getElementById("libero-nummer");
-  const aktuelleLiberoAuswahl = liberoSelect.value;
-  liberoSelect.innerHTML = '<option value="">Kein Libero</option>';
-  for (const spieler of zustand.kader.filter((s) => s.istLibero)) {
-    const option = document.createElement("option");
-    option.value = spieler.nummer;
-    option.textContent = "#" + spieler.nummer;
-    liberoSelect.appendChild(option);
-  }
-  if (aktuelleLiberoAuswahl) liberoSelect.value = aktuelleLiberoAuswahl;
 }
 
 function aufstellungUebernehmen() {
@@ -196,23 +189,16 @@ function aufstellungUebernehmen() {
     return;
   }
 
-  const liberoNummer = document.getElementById("libero-nummer").value;
-  const ersetztSpieler = document.getElementById("libero-ersetzt").value;
-  let libero = null;
-  if (liberoNummer) {
-    if (!ersetztSpieler) {
-      alert("Bitte festlegen, welchen Spieler der Libero ersetzt.");
-      return;
-    }
-    libero = { liberoNummer: parseInt(liberoNummer, 10), ersetztSpieler: parseInt(ersetztSpieler, 10) };
-  }
-
   const wirAmAufschlag = document.getElementById("aufschlag-wir").checked;
+  const zielPunktzahl = parseInt(document.getElementById("zielpunktzahl").value, 10) || ZIELPUNKTZAHL_STANDARD;
 
   zustand.satz = {
     positionen,
-    libero,
+    liberoImFeld: null,
     wirAmAufschlag,
+    punkte: { wir: 0, gegner: 0 },
+    zielPunktzahl,
+    beendet: false,
     fehler: [],
     laeuft: true,
   };
@@ -220,26 +206,6 @@ function aufstellungUebernehmen() {
   speichern();
   renderAlles();
   zeigeAnsicht("spiel");
-}
-
-function renderLiberoErsetztOptionen() {
-  // Welche Spieler kann der Libero ersetzen? Die 6, die gerade in den
-  // Positions-Dropdowns ausgewählt sind.
-  const select = document.getElementById("libero-ersetzt");
-  const aktuelleAuswahl = select.value;
-  const ausgewaehlte = [];
-  for (let i = 1; i <= 6; i++) {
-    const wert = document.getElementById("pos-" + i).value;
-    if (wert) ausgewaehlte.push(wert);
-  }
-  select.innerHTML = '<option value="">—</option>';
-  for (const nummer of ausgewaehlte) {
-    const option = document.createElement("option");
-    option.value = nummer;
-    option.textContent = "#" + nummer;
-    select.appendChild(option);
-  }
-  if (aktuelleAuswahl) select.value = aktuelleAuswahl;
 }
 
 // ---------- Spiel-Ansicht ----------
@@ -252,7 +218,8 @@ const COURT_UNTEN = [4, 5, 0]; // Positionen 5, 6, 1 (1 = Aufschlag)
 function renderSpielfeld() {
   if (!zustand.satz.laeuft) return;
 
-  const anzeige = berechneAnzeige(zustand.satz.positionen, zustand.satz.libero);
+  const anzeige = berechneAnzeige(zustand.satz.positionen, zustand.satz.liberoImFeld);
+  const zuspielerKader = zustand.kader.find((s) => s.istZuspieler);
 
   const renderReihe = (containerId, indexReihenfolge) => {
     const container = document.getElementById(containerId);
@@ -260,9 +227,10 @@ function renderSpielfeld() {
     for (const index of indexReihenfolge) {
       const info = anzeige[index];
       const kachel = document.createElement("button");
-      kachel.className = "court-kachel";
+      kachel.className = "court-kachel pos-" + info.position;
       if (info.istAufschlagPosition) kachel.classList.add("aufschlag-position");
       if (info.liberoAktiv) kachel.classList.add("libero-aktiv");
+      if (zuspielerKader && info.originalSpieler === zuspielerKader.nummer) kachel.classList.add("zuspieler-aktiv");
 
       const nummerSpan = document.createElement("span");
       nummerSpan.className = "court-nummer";
@@ -276,9 +244,15 @@ function renderSpielfeld() {
 
       if (info.liberoAktiv) {
         const liberoSpan = document.createElement("span");
-        liberoSpan.className = "court-libero-markierung";
+        liberoSpan.className = "court-markierung court-markierung-libero";
         liberoSpan.textContent = "Libero";
         kachel.appendChild(liberoSpan);
+      }
+      if (zuspielerKader && info.originalSpieler === zuspielerKader.nummer) {
+        const zSpan = document.createElement("span");
+        zSpan.className = "court-markierung court-markierung-zuspieler";
+        zSpan.textContent = "Zuspieler";
+        kachel.appendChild(zSpan);
       }
 
       kachel.addEventListener("click", () => spielerWechseln(index));
@@ -293,17 +267,25 @@ function renderSpielfeld() {
     ? "Wir schlagen auf"
     : "Gegner schlägt auf";
 
-  const zuspieler = zustand.kader.find((s) => s.istZuspieler);
   const laeuferEl = document.getElementById("laeufer-status");
-  if (!zuspieler) {
+  if (!zuspielerKader) {
     laeuferEl.textContent = "";
   } else {
-    const laeufer = berechneLaeufer(zustand.satz.positionen, zuspieler.nummer);
-    laeuferEl.textContent = laeufer ? "Läufer " + laeufer : "Zuspieler (#" + zuspieler.nummer + ") nicht auf dem Feld";
+    const laeufer = berechneLaeufer(zustand.satz.positionen, zuspielerKader.nummer);
+    laeuferEl.textContent = laeufer
+      ? "Läufer " + laeufer
+      : "Zuspieler (#" + zuspielerKader.nummer + ") nicht auf dem Feld";
   }
+
+  document.getElementById("punktestand").textContent =
+    zustand.satz.punkte.wir + " : " + zustand.satz.punkte.gegner;
+
+  renderLiberoKontrollen();
+  renderSatzEndeBanner();
 }
 
 function spielerWechseln(index) {
+  if (zustand.satz.beendet) return;
   const aktuelleNummer = zustand.satz.positionen[index];
   const auswahl = zustand.kader
     .filter((s) => !s.istLibero)
@@ -333,11 +315,123 @@ function spielerWechseln(index) {
   renderSpielfeld();
 }
 
-function punktFuerUns() {
+// ---------- Libero: manuelles Rein-/Raus-/Verschieben-Tauschen ----------
+// Reine Anzeige-Überlagerung (satz.liberoImFeld) — "positionen" (die echte
+// Rotation) wird dabei NIE verändert. Bei jeder tatsächlichen Rotation wird
+// die Überlagerung automatisch gelöscht (siehe punktFuerUns/fehlerBestaetigen),
+// damit nie ein veralteter Libero-Platz stehen bleibt — der Trainer tauscht
+// den Libero danach einfach neu ein, falls nötig.
+
+function liberoKandidaten() {
+  return zustand.kader.filter((s) => s.istLibero);
+}
+
+function liberoReinnehmen() {
+  const kandidaten = liberoKandidaten();
+  if (kandidaten.length === 0) {
+    alert("Kein Spieler ist im Kader als Libero markiert.");
+    return;
+  }
+  let liberoNummer = kandidaten[0].nummer;
+  if (kandidaten.length > 1) {
+    const eingabe = prompt("Welcher Libero? (" + kandidaten.map((s) => s.nummer).join(", ") + ")", liberoNummer);
+    if (eingabe === null) return;
+    liberoNummer = parseInt(eingabe, 10);
+    if (!kandidaten.some((s) => s.nummer === liberoNummer)) {
+      alert("Unbekannte Libero-Nummer.");
+      return;
+    }
+  }
+  const posEingabe = prompt("Für welche Position (1-6) soll der Libero reinkommen?");
+  if (posEingabe === null) return;
+  const position = parseInt(posEingabe, 10);
+  if (!(position >= 1 && position <= 6)) {
+    alert("Bitte eine Zahl von 1 bis 6 eingeben.");
+    return;
+  }
+  if (position === 1) {
+    if (!confirm("Position 1 ist die Aufschlagposition — laut Regel schlägt der Libero nicht auf. Trotzdem fortfahren?")) {
+      return;
+    }
+  }
   sichereHistorie();
-  const ergebnis = naechsterZustandNachPunkt(zustand.satz.positionen, zustand.satz.wirAmAufschlag, true);
+  zustand.satz.liberoImFeld = { positionIndex: position - 1, liberoNummer };
+  speichern();
+  renderSpielfeld();
+}
+
+function liberoRausnehmen() {
+  if (!zustand.satz.liberoImFeld) return;
+  sichereHistorie();
+  zustand.satz.liberoImFeld = null;
+  speichern();
+  renderSpielfeld();
+}
+
+function liberoVerschieben() {
+  if (!zustand.satz.liberoImFeld) return;
+  const posEingabe = prompt("Libero auf welche Position (1-6) verschieben?");
+  if (posEingabe === null) return;
+  const position = parseInt(posEingabe, 10);
+  if (!(position >= 1 && position <= 6)) {
+    alert("Bitte eine Zahl von 1 bis 6 eingeben.");
+    return;
+  }
+  if (position === 1 && !confirm("Position 1 ist die Aufschlagposition — laut Regel schlägt der Libero nicht auf. Trotzdem fortfahren?")) {
+    return;
+  }
+  sichereHistorie();
+  zustand.satz.liberoImFeld.positionIndex = position - 1;
+  speichern();
+  renderSpielfeld();
+}
+
+function renderLiberoKontrollen() {
+  const status = document.getElementById("libero-status");
+  const reinBtn = document.getElementById("libero-rein");
+  const rausBtn = document.getElementById("libero-raus");
+  const verschiebenBtn = document.getElementById("libero-verschieben");
+
+  const aktiv = zustand.satz.liberoImFeld;
+  if (!aktiv) {
+    status.textContent = "Libero draußen";
+    reinBtn.style.display = "";
+    rausBtn.style.display = "none";
+    verschiebenBtn.style.display = "none";
+  } else {
+    status.textContent = "Libero (#" + aktiv.liberoNummer + ") auf Pos. " + (aktiv.positionIndex + 1);
+    reinBtn.style.display = "none";
+    rausBtn.style.display = "";
+    verschiebenBtn.style.display = "";
+  }
+}
+
+// ---------- Punkte, Rotation, Satzende ----------
+
+function pruefeSatzende() {
+  const { wir, gegner } = zustand.satz.punkte;
+  if (satzIstBeendet(wir, gegner, zustand.satz.zielPunktzahl)) {
+    zustand.satz.beendet = true;
+  }
+}
+
+function rotationAnwenden(ergebnis) {
   zustand.satz.positionen = ergebnis.positionen;
   zustand.satz.wirAmAufschlag = ergebnis.wirAmAufschlag;
+  if (ergebnis.rotiert) {
+    // Die Hauptaufstellung hat sich gedreht — ein alter Libero-Platz wäre
+    // jetzt falsch. Der Trainer tauscht den Libero bei Bedarf neu ein.
+    zustand.satz.liberoImFeld = null;
+  }
+}
+
+function punktFuerUns() {
+  if (zustand.satz.beendet) return;
+  sichereHistorie();
+  zustand.satz.punkte.wir++;
+  const ergebnis = naechsterZustandNachPunkt(zustand.satz.positionen, zustand.satz.wirAmAufschlag, true);
+  rotationAnwenden(ergebnis);
+  pruefeSatzende();
   speichern();
   renderSpielfeld();
 }
@@ -345,6 +439,7 @@ function punktFuerUns() {
 let ausstehenderPunktverlust = false;
 
 function punktFuerGegnerStarten() {
+  if (zustand.satz.beendet) return;
   ausstehenderPunktverlust = true;
   document.getElementById("fehler-dialog").classList.add("aktiv");
   renderFehlerDialogSpielerListe();
@@ -359,7 +454,7 @@ function renderFehlerDialogSpielerListe() {
   const container = document.getElementById("fehler-spieler-liste");
   container.innerHTML = "";
   // Alle gerade auf dem Feld sichtbaren Nummern (inkl. Libero) anbieten.
-  const anzeige = berechneAnzeige(zustand.satz.positionen, zustand.satz.libero);
+  const anzeige = berechneAnzeige(zustand.satz.positionen, zustand.satz.liberoImFeld);
   const sichtbareNummern = [...new Set(anzeige.map((a) => a.anzeigeNummer))];
   for (const nummer of sichtbareNummern) {
     const btn = document.createElement("button");
@@ -385,10 +480,11 @@ function fehlerBestaetigen(grund) {
 
   sichereHistorie();
   zustand.satz.fehler.push({ nummer: parseInt(nummer, 10), grund, zeit: new Date().toISOString() });
+  zustand.satz.punkte.gegner++;
 
   const ergebnis = naechsterZustandNachPunkt(zustand.satz.positionen, zustand.satz.wirAmAufschlag, false);
-  zustand.satz.positionen = ergebnis.positionen;
-  zustand.satz.wirAmAufschlag = ergebnis.wirAmAufschlag;
+  rotationAnwenden(ergebnis);
+  pruefeSatzende();
 
   speichern();
   ausstehenderPunktverlust = false;
@@ -396,6 +492,20 @@ function fehlerBestaetigen(grund) {
   delete container.dataset.ausgewaehlt;
   renderSpielfeld();
   renderFehlerListe();
+}
+
+function renderSatzEndeBanner() {
+  const banner = document.getElementById("satz-ende-banner");
+  const punktBtns = document.getElementById("punkt-buttons");
+  if (!zustand.satz.beendet) {
+    banner.classList.remove("aktiv");
+    punktBtns.classList.remove("ausgeblendet");
+    return;
+  }
+  const { wir, gegner } = zustand.satz.punkte;
+  banner.textContent = wir > gegner ? "Satz gewonnen " + wir + ":" + gegner + " 🎉" : "Satz verloren " + wir + ":" + gegner;
+  banner.classList.add("aktiv");
+  punktBtns.classList.add("ausgeblendet");
 }
 
 function renderFehlerListe() {
@@ -417,12 +527,11 @@ function renderFehlerListe() {
 }
 
 function neuerSatz() {
-  if (!confirm("Neuen Satz starten? Die aktuelle Aufstellung und das Fehler-Log werden zurückgesetzt.")) return;
+  if (!confirm("Neuen Satz starten? Die aktuelle Aufstellung, der Punktestand und das Fehler-Log werden zurückgesetzt.")) return;
   zustand.satz = leererZustand().satz;
   zustand.historie = [];
   speichern();
   renderAufstellungOptionen();
-  renderLiberoErsetztOptionen();
   zeigeAnsicht("aufstellung");
 }
 
@@ -431,7 +540,6 @@ function neuerSatz() {
 function renderAlles() {
   renderKader();
   renderAufstellungOptionen();
-  renderLiberoErsetztOptionen();
   renderSpielfeld();
   renderFehlerListe();
 }
@@ -448,9 +556,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Enter") kaderSpielerHinzufuegen();
   });
 
-  for (let i = 1; i <= 6; i++) {
-    document.getElementById("pos-" + i).addEventListener("change", renderLiberoErsetztOptionen);
-  }
   document.getElementById("aufstellung-uebernehmen").addEventListener("click", aufstellungUebernehmen);
 
   document.getElementById("punkt-uns").addEventListener("click", punktFuerUns);
@@ -460,6 +565,10 @@ window.addEventListener("DOMContentLoaded", () => {
     const btn = document.querySelector('[data-grund="' + grund + '"]');
     if (btn) btn.addEventListener("click", () => fehlerBestaetigen(grund));
   }
+
+  document.getElementById("libero-rein").addEventListener("click", liberoReinnehmen);
+  document.getElementById("libero-raus").addEventListener("click", liberoRausnehmen);
+  document.getElementById("libero-verschieben").addEventListener("click", liberoVerschieben);
 
   document.getElementById("rueckgaengig").addEventListener("click", rueckgaengig);
   document.getElementById("neuer-satz").addEventListener("click", neuerSatz);
