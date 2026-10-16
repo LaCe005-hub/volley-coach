@@ -6,7 +6,9 @@
 - Umgebungsvariablen: keine
 - Dauerhafte Daten: keine auf dem Server — alles bleibt im `localStorage` des jeweiligen Browsers/Geräts
 - Lebenszeichen: `GET /` liefert `index.html`
-- Adresse: wird von GitHub Pages vergeben, siehe unten
+- Adresse: **https://lace005-hub.github.io/volley-coach/**
+- Repo-Sichtbarkeit: **öffentlich** (bewusste Entscheidung des Nutzers — nötig, damit GitHub Pages auf dem kostenlosen Plan funktioniert; die veröffentlichte Seite hat `noindex`, ist also nicht für Suchmaschinen gedacht)
+- Freigabe-Status: **mit Auflage akzeptiert** — ein Blocker (`X-Content-Type-Options`-Header fehlt, Plattform-Grenze von GitHub Pages) wurde vom Nutzer bewusst akzeptiert. Details: `10_Weitermachen/freigabe/freigabe_2026-10-16.md`
 
 ## Hinweis für den nächsten Agenten
 
