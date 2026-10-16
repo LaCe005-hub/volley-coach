@@ -72,10 +72,31 @@ function berechneLaeufer(positionen, zuspielerNummer) {
 
 // Ein Satz ist beendet, wenn eine Mannschaft die Zielpunktzahl erreicht hat
 // UND mindestens 2 Punkte Vorsprung hat (Standard-Volleyball-Regel). Für den
-// entscheidenden 5. Satz kann die Zielpunktzahl auf 15 gesetzt werden statt
-// der üblichen 25 — das stellt der Trainer in der Aufstellung-Ansicht ein.
+// Entscheidungssatz kann die Zielpunktzahl auf 15 gesetzt werden statt der
+// üblichen 25 — das schlägt die App automatisch vor (siehe istEntscheidungssatz).
 function satzIstBeendet(punkteWir, punkteGegner, zielPunktzahl) {
   const fuehrenderVorsprung = Math.abs(punkteWir - punkteGegner);
   const hoechsterStand = Math.max(punkteWir, punkteGegner);
   return hoechsterStand >= zielPunktzahl && fuehrenderVorsprung >= 2;
+}
+
+// Wie viele Sätze eine Mannschaft gewinnen muss, um das Match zu gewinnen.
+// Best of 3 -> 2 Sätze, Best of 5 -> 3 Sätze.
+function benoetigteSatzgewinne(format) {
+  return Math.ceil(format / 2);
+}
+
+// Match ist beendet, sobald eine Mannschaft die nötige Anzahl Sätze hat.
+function matchIstBeendet(saetzeWir, saetzeGegner, format) {
+  const noetig = benoetigteSatzgewinne(format);
+  return saetzeWir >= noetig || saetzeGegner >= noetig;
+}
+
+// Der jeweils letzte mögliche Satz eines Formats (3. Satz bei Best of 3,
+// 5. Satz bei Best of 5) ist der Entscheidungssatz und wird standardmäßig
+// nur bis 15 statt bis 25 gespielt. "naechsteSatznummer" ist die Nummer des
+// Satzes, der als Nächstes gespielt wird (bereits gewonnene Sätze + 1).
+function istEntscheidungssatz(saetzeWir, saetzeGegner, format) {
+  const naechsteSatznummer = saetzeWir + saetzeGegner + 1;
+  return naechsteSatznummer === format;
 }

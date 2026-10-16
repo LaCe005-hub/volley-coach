@@ -10,18 +10,17 @@
   --farbe-erfolg: #166534; /* dunkleres Grün, selbe Begründung */
   --farbe-gefahr: #b91c1c; /* dunkleres Rot, selbe Begründung */
   --farbe-libero: #f59e0b;
-  --farbe-zuspieler: #22d3ee;
+  --farbe-zuspieler-text: #22d3ee;
   --rand-radius: 10px;
 
-  /* Je eine eigene, aber ähnlich dunkle Farbe pro Feldposition (alle geben
-     auf weißem Text min. 4,5:1 Kontrast), damit man die Positionen auf
-     einen Blick unterscheidet. */
-  --farbe-pos-1: #1e3a8a;
-  --farbe-pos-2: #6d28d9;
-  --farbe-pos-3: #0f766e;
-  --farbe-pos-4: #9d174d;
-  --farbe-pos-5: #854d0e;
-  --farbe-pos-6: #4338ca;
+  /* Eine Farbe je Spieler-Rolle (nicht je Feldposition!) — bleibt beim
+     Spieler, egal wohin er rotiert. Alle Farben geben auf weißem Text
+     mindestens 4,5:1 Kontrast (einzeln geprüft). */
+  --farbe-rolle-aussen: #0f766e; /* Außenangreifer — 2x im Feld */
+  --farbe-rolle-zuspieler: #1e40af; /* Zuspieler — 1x im Feld (klares Blau, nicht mit Mittelblocker-Violett verwechselbar) */
+  --farbe-rolle-mitte: #6d28d9; /* Mittelblocker — 2x im Feld */
+  --farbe-rolle-diagonal: #9d174d; /* Diagonal — 1x im Feld */
+  --farbe-rolle-libero: #854d0e; /* Libero — 1x im Feld (eingetauscht) */
 }
 
 * {
@@ -45,6 +44,12 @@ h1,
 h2 {
   font-size: 1.05rem;
   margin: 1.5rem 0 0.5rem;
+}
+
+h3 {
+  font-size: 0.9rem;
+  margin: 1rem 0 0.3rem;
+  color: var(--farbe-hinweis);
 }
 
 .hinweis {
@@ -166,15 +171,25 @@ h2 {
   margin-left: auto;
 }
 
-.kader-markierung-label {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  color: var(--farbe-hinweis);
-  font-size: 0.85rem;
+.kader-rolle-auswahl {
+  flex: 1;
+  max-width: 11rem;
 }
 
 /* ---------- Aufstellung ---------- */
+
+.spielformat-block {
+  background: var(--farbe-flaeche);
+  border-radius: var(--rand-radius);
+  padding: 0.75rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.spielformat-auswahl {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.4rem;
+}
 
 .aufstellung-grid {
   display: grid;
@@ -240,6 +255,12 @@ select {
   margin: 0.5rem 0;
 }
 
+.saetze-stand {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--farbe-hinweis);
+}
+
 .punktestand {
   display: block;
   font-size: 1.6rem;
@@ -272,11 +293,43 @@ select {
   display: block;
 }
 
+.match-statistik {
+  display: none;
+  background: var(--farbe-flaeche);
+  border-radius: var(--rand-radius);
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+}
+
+.match-statistik.aktiv {
+  display: block;
+}
+
+.statistik-liste {
+  margin-bottom: 0.5rem;
+}
+
+.statistik-zeile {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #1f2d41;
+  font-size: 0.9rem;
+}
+
 .punkt-buttons.ausgeblendet {
   display: none;
 }
 
+/* Court + Libero-Icon nebeneinander ("Icon an der Seite"). */
+.spielfeld-reihe {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .court {
+  flex: 1;
   background: #14532d;
   border-radius: var(--rand-radius);
   padding: 0.75rem;
@@ -306,38 +359,27 @@ select {
   aspect-ratio: 1;
   border: none;
   border-radius: var(--rand-radius);
+  background: var(--farbe-flaeche); /* Fallback, solange keine Rolle gesetzt ist */
   color: var(--farbe-text);
 }
 
-/* Jede Position hat ihre eigene Farbe, damit man sie auf einen Blick
-   unterscheidet (Schiedsrichter-/Trainer-Konvention: Position 1 = Aufschlag). */
-.court-kachel.pos-1 { background: var(--farbe-pos-1); }
-.court-kachel.pos-2 { background: var(--farbe-pos-2); }
-.court-kachel.pos-3 { background: var(--farbe-pos-3); }
-.court-kachel.pos-4 { background: var(--farbe-pos-4); }
-.court-kachel.pos-5 { background: var(--farbe-pos-5); }
-.court-kachel.pos-6 { background: var(--farbe-pos-6); }
+/* Farbe nach Spieler-Rolle, nicht nach Feldposition — bleibt beim Spieler,
+   egal wohin er rotiert. */
+.court-kachel.rolle-aussen { background: var(--farbe-rolle-aussen); }
+.court-kachel.rolle-zuspieler { background: var(--farbe-rolle-zuspieler); }
+.court-kachel.rolle-mitte { background: var(--farbe-rolle-mitte); }
+.court-kachel.rolle-diagonal { background: var(--farbe-rolle-diagonal); }
+.court-kachel.rolle-libero { background: var(--farbe-rolle-libero); }
 
-/* Aufschlagposition: heller Rand, unabhängig von der Positionsfarbe sichtbar. */
+/* Aufschlagposition: heller Rand, unabhängig von der Rollenfarbe sichtbar. */
 .court-kachel.aufschlag-position {
   box-shadow: inset 0 0 0 3px var(--farbe-text);
 }
 
-/* Libero und Zuspieler sollen über der Positionsfarbe deutlich hervorstechen —
-   dicker, kräftig gefärbter Rand statt Hintergrundfarbe, damit die
-   Positionsfarbe weiterhin erkennbar bleibt. */
+/* Der Libero ist nur vorübergehend eingetauscht — zusätzlicher Rand macht
+   das deutlich, obendrauf auf die ohnehin eigene Libero-Farbe. */
 .court-kachel.libero-aktiv {
   box-shadow: inset 0 0 0 4px var(--farbe-libero);
-}
-
-.court-kachel.zuspieler-aktiv {
-  box-shadow: inset 0 0 0 4px var(--farbe-zuspieler);
-}
-
-/* Seltener Fall: Libero steht zufällig genau auf der Position, die der
-   Zuspieler in der Hauptaufstellung hätte — beide Ränder übereinander. */
-.court-kachel.libero-aktiv.zuspieler-aktiv {
-  box-shadow: inset 0 0 0 4px var(--farbe-libero), inset 0 0 0 8px var(--farbe-zuspieler);
 }
 
 .court-nummer {
@@ -361,22 +403,47 @@ select {
 }
 
 .court-markierung-zuspieler {
-  color: var(--farbe-zuspieler);
+  color: var(--farbe-zuspieler-text);
 }
 
-.libero-kontrollen {
+/* ---------- Libero-Icon an der Seite ---------- */
+
+.libero-icon-spalte {
+  flex-shrink: 0;
+  width: 4.2rem;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: center;
   gap: 0.3rem;
-  margin: 0.75rem 0;
+  text-align: center;
 }
 
-.libero-status {
-  width: 100%;
-  font-size: 0.85rem;
+.libero-icon {
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 50%;
+  border: 3px solid var(--farbe-libero);
+  background: var(--farbe-flaeche);
   color: var(--farbe-libero);
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.libero-icon.bereit {
+  background: var(--farbe-libero);
+  color: var(--farbe-hintergrund);
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.35);
+}
+
+.libero-icon.platziert {
+  background: var(--farbe-rolle-libero);
+  color: var(--farbe-text);
+  border-color: var(--farbe-text);
+}
+
+.libero-icon-label {
+  font-size: 0.65rem;
+  color: var(--farbe-hinweis);
 }
 
 .punkt-buttons {

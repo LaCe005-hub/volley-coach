@@ -31,6 +31,15 @@
   <!-- ===================== AUFSTELLUNG ===================== -->
   <section id="ansicht-aufstellung" class="ansicht">
     <h2 class="ansicht-titel">Aufstellung</h2>
+
+    <div id="spielformat-block" class="spielformat-block">
+      <p class="hinweis">Neues Match — wie wird gespielt?</p>
+      <div class="spielformat-auswahl">
+        <label><input type="radio" name="spielformat" value="3" checked /> Best of 3</label>
+        <label><input type="radio" name="spielformat" value="5" /> Best of 5</label>
+      </div>
+    </div>
+
     <p class="hinweis">Spieler pro Position festlegen. Position 1 ist die Aufschlagposition.</p>
 
     <div class="aufstellung-grid">
@@ -42,7 +51,7 @@
       <div class="aufstellung-feld"><label>Pos. 1 ⚡</label><select id="pos-1"></select></div>
     </div>
 
-    <p class="hinweis">Den Libero tauschst du live im Spiel ein — dafür musst du hier nichts einstellen.</p>
+    <p class="hinweis">Den Libero tauschst du live im Spiel per Icon ein — dafür musst du hier nichts einstellen.</p>
 
     <div class="aufschlag-auswahl">
       <label><input type="radio" name="aufschlag" id="aufschlag-wir" checked /> Wir schlagen zuerst auf</label>
@@ -50,7 +59,7 @@
     </div>
 
     <div class="zielpunktzahl-feld">
-      <label for="zielpunktzahl">Punkte zum Satzgewinn (25, im Entscheidungssatz meist 15)</label>
+      <label for="zielpunktzahl">Punkte zum Satzgewinn (im Entscheidungssatz automatisch 15 vorgeschlagen)</label>
       <input type="number" id="zielpunktzahl" min="1" max="99" value="25" />
     </div>
 
@@ -61,6 +70,7 @@
   <section id="ansicht-spiel" class="ansicht">
     <div class="spiel-kopf">
       <div>
+        <span id="saetze-stand" class="saetze-stand"></span>
         <span id="punktestand" class="punktestand"></span>
         <span id="aufschlag-status" class="aufschlag-status"></span>
         <span id="laeufer-status" class="laeufer-status"></span>
@@ -69,18 +79,18 @@
     </div>
 
     <div id="satz-ende-banner" class="satz-ende-banner"></div>
+    <div id="match-statistik" class="match-statistik"></div>
 
-    <div class="court">
-      <div id="court-oben" class="court-reihe"></div>
-      <div class="netz-linie">Netz</div>
-      <div id="court-unten" class="court-reihe"></div>
-    </div>
-
-    <div class="libero-kontrollen">
-      <span id="libero-status" class="libero-status"></span>
-      <button id="libero-rein" class="btn-klein">Libero rein</button>
-      <button id="libero-raus" class="btn-klein">Libero raus</button>
-      <button id="libero-verschieben" class="btn-klein">Libero verschieben</button>
+    <div class="spielfeld-reihe">
+      <div class="court">
+        <div id="court-oben" class="court-reihe"></div>
+        <div class="netz-linie">Netz</div>
+        <div id="court-unten" class="court-reihe"></div>
+      </div>
+      <div class="libero-icon-spalte">
+        <button id="libero-icon" class="libero-icon" title="Libero tauschen"></button>
+        <span id="libero-icon-label" class="libero-icon-label"></span>
+      </div>
     </div>
 
     <div id="punkt-buttons" class="punkt-buttons">
@@ -91,7 +101,8 @@
     <h2>Punktverluste in diesem Satz</h2>
     <div id="fehler-log"></div>
 
-    <button id="neuer-satz" class="btn-klein">Neuer Satz</button>
+    <button id="neuer-satz" class="btn-klein">Nächster Satz</button>
+    <button id="neues-match" class="btn-klein">Neues Match</button>
   </section>
 
   <!-- ===================== FEHLER-DIALOG ===================== -->
