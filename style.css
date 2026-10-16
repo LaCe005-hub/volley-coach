@@ -5,9 +5,10 @@
   --farbe-flaeche: #1e293b;
   --farbe-text: #f1f5f9;
   --farbe-hinweis: #94a3b8;
-  --farbe-akzent: #3b82f6;
-  --farbe-erfolg: #16a34a;
-  --farbe-gefahr: #dc2626;
+  --farbe-akzent: #3b82f6; /* als Text/Rahmen auf dunklem Grund, nicht als Knopf-Hintergrund */
+  --farbe-knopf: #1d4ed8; /* dunkleres Blau, damit weißer Text auf dem Knopf genug Kontrast hat */
+  --farbe-erfolg: #166534; /* dunkleres Grün, selbe Begründung */
+  --farbe-gefahr: #b91c1c; /* dunkleres Rot, selbe Begründung */
   --farbe-libero: #f59e0b;
   --rand-radius: 10px;
 }
@@ -24,7 +25,8 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-h1 {
+h1,
+.ansicht-titel {
   font-size: 1.3rem;
   margin: 1rem 0 0.5rem;
 }
@@ -83,7 +85,7 @@ h2 {
   padding: 0.8rem 1rem;
   border: none;
   border-radius: var(--rand-radius);
-  background: var(--farbe-akzent);
+  background: var(--farbe-knopf);
   color: white;
   font-size: 1rem;
 }
@@ -114,8 +116,8 @@ h2 {
 }
 
 .btn-klein.ausgewaehlt {
-  background: var(--farbe-akzent);
-  border-color: var(--farbe-akzent);
+  background: var(--farbe-knopf);
+  border-color: var(--farbe-knopf);
 }
 
 /* ---------- Kader ---------- */
