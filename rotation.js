@@ -41,13 +41,14 @@ function naechsterZustandNachPunkt(positionen, wirAmAufschlag, punktFuerUns) {
 
 // Was auf jeder der 6 Positionen angezeigt wird. Der Libero ist eine reine
 // Anzeige-Überlagerung (liberoImFeld), die Aufstellung (positionen) selbst
-// wird davon nie verändert — der Trainer tauscht den Libero manuell rein
-// und raus, unabhängig von der Rotation.
+// wird davon nie verändert. Der Libero ist an den Spieler gebunden, den er
+// ersetzt (nicht an eine feste Position) — dadurch "läuft er mit", wenn
+// rotiert wird, und bleibt drin, bis der Trainer ihn wieder raustauscht.
 //
-// liberoImFeld: { positionIndex, liberoNummer } oder null
+// liberoImFeld: { ersetztSpieler, liberoNummer } oder null
 function berechneAnzeige(positionen, liberoImFeld) {
   return positionen.map((spielerNummer, index) => {
-    const liberoHier = !!(liberoImFeld && liberoImFeld.positionIndex === index);
+    const liberoHier = !!(liberoImFeld && liberoImFeld.ersetztSpieler === spielerNummer);
     return {
       position: index + 1,
       originalSpieler: spielerNummer,

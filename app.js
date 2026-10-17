@@ -33,7 +33,7 @@ function leererZustand() {
     },
     satz: {
       positionen: [null, null, null, null, null, null],
-      liberoImFeld: null, // {positionIndex, liberoNummer} — reine Anzeige-Überlagerung, rührt "positionen" nie an
+      liberoImFeld: null, // {ersetztSpieler, liberoNummer} — reine Anzeige-Überlagerung, rührt "positionen" nie an; folgt dem ersetzten Spieler durch die Rotation
       wirAmAufschlag: true,
       punkte: { wir: 0, gegner: 0 },
       zielPunktzahl: ZIELPUNKTZAHL_STANDARD,
@@ -313,7 +313,10 @@ function renderSpielfeld() {
       if (info.liberoAktiv) {
         const liberoSpan = document.createElement("span");
         liberoSpan.className = "court-markierung court-markierung-libero";
-        liberoSpan.textContent = "Libero";
+        // Der Libero darf laut Regel nicht aufschlagen — rotiert er auf
+        // diese Position, macht die Beschriftung selbst darauf aufmerksam
+        // (keine Bestätigung nötig, da das durch die Rotation passiv passiert).
+        liberoSpan.textContent = info.istAufschlagPosition ? "Libero ⚠" : "Libero";
         kachel.appendChild(liberoSpan);
       }
       if (zuspielerKader && info.originalSpieler === zuspielerKader.nummer) {
@@ -393,19 +396,18 @@ function spielerWechseln(index) {
 
 // ---------- Libero: Icon an der Seite, Tausch per Antippen ODER Ziehen ----------
 // Reine Anzeige-Überlagerung (satz.liberoImFeld) — "positionen" (die echte
-// Rotation) wird dabei NIE verändert. Zwei Bedienwege, beide führen zum
-// selben Ergebnis:
+// Rotation) wird dabei NIE verändert. Der Libero ist an den SPIELER
+// gebunden, den er ersetzt (liberoImFeld.ersetztSpieler), nicht an eine
+// feste Position — dadurch "läuft er mit", wenn rotiert wird, und bleibt
+// so lange drin, bis der Trainer ihn selbst wieder raustauscht.
+// Zwei Bedienwege, beide führen zum selben Ergebnis:
 //   a) Antippen: Icon antippen scharf machen ("bereit"), dann eine
-//      Positions-Kachel antippen → Libero steht dort. Icon nochmal
-//      antippen tauscht ihn zurück.
+//      Positions-Kachel antippen → Libero ersetzt den Spieler, der dort
+//      gerade steht. Icon nochmal antippen tauscht ihn zurück.
 //   b) Ziehen: Icon mit dem Finger auf eine Positions-Kachel ziehen und
-//      loslassen → Libero steht dort, ohne Zwischenschritt. Außerhalb
-//      jeder Kachel loslassen, während der Libero schon im Feld steht,
-//      tauscht ihn zurück.
-// Bei jeder tatsächlichen Rotation wird die Überlagerung automatisch
-// gelöscht (siehe rotationAnwenden), damit nie ein veralteter Platz stehen
-// bleibt — Icon einfach erneut antippen/ziehen, falls der Libero wieder
-// gebraucht wird.
+//      loslassen → Libero ersetzt den Spieler dort, ohne Zwischenschritt.
+//      Außerhalb jeder Kachel loslassen, während der Libero schon im Feld
+//      steht, tauscht ihn zurück.
 
 let liberoModusAktiv = false; // transient, nicht gespeichert
 let liberoGewaehlteNummer = null; // transient, nicht gespeichert
@@ -456,11 +458,8 @@ function liberoIconKlick() {
 }
 
 function liberoAufPositionSetzen(index) {
-  if (index === 0 && !confirm("Position 1 ist die Aufschlagposition — laut Regel schlägt der Libero nicht auf. Trotzdem fortfahren?")) {
-    return;
-  }
   sichereHistorie();
-  zustand.satz.liberoImFeld = { positionIndex: index, liberoNummer: liberoGewaehlteNummer };
+  zustand.satz.liberoImFeld = { ersetztSpieler: zustand.satz.positionen[index], liberoNummer: liberoGewaehlteNummer };
   liberoModusAktiv = false;
   speichern();
   renderSpielfeld();
@@ -567,9 +566,13 @@ function renderLiberoIcon() {
   icon.classList.remove("bereit", "platziert");
 
   if (zustand.satz.liberoImFeld) {
+    const index = zustand.satz.positionen.indexOf(zustand.satz.liberoImFeld.ersetztSpieler);
     icon.textContent = "#" + zustand.satz.liberoImFeld.liberoNummer;
     icon.classList.add("platziert");
-    label.textContent = "Pos. " + (zustand.satz.liberoImFeld.positionIndex + 1) + " — antippen zum Zurücktauschen";
+    label.textContent =
+      index === -1
+        ? "Ersetzter Spieler nicht im Feld — antippen zum Zurücktauschen"
+        : "Pos. " + (index + 1) + " — läuft mit, antippen zum Zurücktauschen";
   } else if (liberoModusAktiv) {
     icon.textContent = "#" + liberoGewaehlteNummer;
     icon.classList.add("bereit");
@@ -604,11 +607,9 @@ function pruefeSatzende() {
 function rotationAnwenden(ergebnis) {
   zustand.satz.positionen = ergebnis.positionen;
   zustand.satz.wirAmAufschlag = ergebnis.wirAmAufschlag;
-  if (ergebnis.rotiert) {
-    // Die Hauptaufstellung hat sich gedreht — ein alter Libero-Platz wäre
-    // jetzt falsch. Der Trainer tauscht den Libero bei Bedarf per Icon neu ein.
-    zustand.satz.liberoImFeld = null;
-  }
+  // Der Libero ist an den ersetzten Spieler gebunden (liberoImFeld.ersetztSpieler),
+  // nicht an eine Position — er "läuft" bei der Rotation automatisch mit und
+  // bleibt drin, bis der Trainer ihn per Icon wieder raustauscht.
 }
 
 function punktFuerUns() {
