@@ -623,16 +623,19 @@ function punktFuerUns() {
 }
 
 let ausstehenderPunktverlust = false;
+let fehlerAusgewaehlteSpieler = new Set(); // mehrere Spieler können denselben Punktverlust teilen (z. B. bei Kommunikation)
 
 function punktFuerGegnerStarten() {
   if (zustand.satz.beendet) return;
   ausstehenderPunktverlust = true;
+  fehlerAusgewaehlteSpieler = new Set();
   document.getElementById("fehler-dialog").classList.add("aktiv");
   renderFehlerDialogSpielerListe();
 }
 
 function punktFuerGegnerAbbrechen() {
   ausstehenderPunktverlust = false;
+  fehlerAusgewaehlteSpieler = new Set();
   document.getElementById("fehler-dialog").classList.remove("aktiv");
 }
 
@@ -640,16 +643,22 @@ function renderFehlerDialogSpielerListe() {
   const container = document.getElementById("fehler-spieler-liste");
   container.innerHTML = "";
   // Alle gerade auf dem Feld sichtbaren Nummern (inkl. Libero) anbieten.
+  // Mehrfachauswahl: jeder Tipp schaltet die jeweilige Nummer an/aus.
   const anzeige = berechneAnzeige(zustand.satz.positionen, zustand.satz.liberoImFeld);
   const sichtbareNummern = [...new Set(anzeige.map((a) => a.anzeigeNummer))];
   for (const nummer of sichtbareNummern) {
     const btn = document.createElement("button");
     btn.className = "btn-klein";
+    if (fehlerAusgewaehlteSpieler.has(nummer)) btn.classList.add("ausgewaehlt");
     btn.textContent = "#" + nummer;
     btn.addEventListener("click", () => {
-      [...container.children].forEach((b) => b.classList.remove("ausgewaehlt"));
-      btn.classList.add("ausgewaehlt");
-      container.dataset.ausgewaehlt = nummer;
+      if (fehlerAusgewaehlteSpieler.has(nummer)) {
+        fehlerAusgewaehlteSpieler.delete(nummer);
+        btn.classList.remove("ausgewaehlt");
+      } else {
+        fehlerAusgewaehlteSpieler.add(nummer);
+        btn.classList.add("ausgewaehlt");
+      }
     });
     container.appendChild(btn);
   }
@@ -657,15 +666,13 @@ function renderFehlerDialogSpielerListe() {
 
 function fehlerBestaetigen(grund) {
   if (!ausstehenderPunktverlust) return;
-  const container = document.getElementById("fehler-spieler-liste");
-  const nummer = container.dataset.ausgewaehlt;
-  if (!nummer) {
-    alert("Bitte zuerst den Spieler auswählen.");
+  if (fehlerAusgewaehlteSpieler.size === 0) {
+    alert("Bitte zuerst mindestens einen Spieler auswählen.");
     return;
   }
 
   sichereHistorie();
-  zustand.satz.fehler.push({ nummer: parseInt(nummer, 10), grund, zeit: new Date().toISOString() });
+  zustand.satz.fehler.push({ nummern: [...fehlerAusgewaehlteSpieler], grund, zeit: new Date().toISOString() });
   zustand.satz.punkte.gegner++;
 
   const ergebnis = naechsterZustandNachPunkt(zustand.satz.positionen, zustand.satz.wirAmAufschlag, false);
@@ -674,8 +681,8 @@ function fehlerBestaetigen(grund) {
 
   speichern();
   ausstehenderPunktverlust = false;
+  fehlerAusgewaehlteSpieler = new Set();
   document.getElementById("fehler-dialog").classList.remove("aktiv");
-  delete container.dataset.ausgewaehlt;
   renderSpielfeld();
   renderFehlerListe();
 }
@@ -730,10 +737,43 @@ function statistikZeile(label, wert) {
   return zeile;
 }
 
-// Statistik über das gesamte Match (alle abgeschlossenen Sätze zusammen):
-// Fehlerarten absteigend sortiert, plus der Anteil "Eigenfehler". Als
-// Eigenfehler zählt hier alles außer "Unglück" — ein unglücklicher Ballwurf
-// ist kein technischer Fehler, alle anderen Gründe schon.
+// Ein horizontaler Balken: Label links, Balken in der Mitte (Breite = Anteil
+// am größten Wert dieser Liste), Zahl rechts. "rolleKlasse" ist optional —
+// ohne sie bekommt der Balken die neutrale Akzentfarbe (reine Mengen-
+// Vergleiche brauchen keine Kategorie-Farbe, nur bei Spielern macht die
+// Rollenfarbe den Balken zusätzlich wiedererkennbar).
+function balkenZeile(label, wert, maxWert, rolleKlasse) {
+  const zeile = document.createElement("div");
+  zeile.className = "balken-zeile";
+
+  const labelSpan = document.createElement("span");
+  labelSpan.className = "balken-label";
+  labelSpan.textContent = label;
+  zeile.appendChild(labelSpan);
+
+  const spur = document.createElement("div");
+  spur.className = "balken-spur";
+  const fuellung = document.createElement("div");
+  fuellung.className = "balken-fuellung" + (rolleKlasse ? " " + rolleKlasse : "");
+  const breite = maxWert > 0 ? Math.max(6, Math.round((wert / maxWert) * 100)) : 0;
+  fuellung.style.width = breite + "%";
+  spur.appendChild(fuellung);
+  zeile.appendChild(spur);
+
+  const wertSpan = document.createElement("span");
+  wertSpan.className = "balken-wert";
+  wertSpan.textContent = String(wert);
+  zeile.appendChild(wertSpan);
+
+  return zeile;
+}
+
+// Statistik über das gesamte Match (alle abgeschlossenen Sätze zusammen) —
+// sowohl tabellarisch (pro Spieler: Anzahl + Fehlerarten) als auch grafisch
+// (Balkendiagramme). Ein Punktverlust kann mehrere Spieler betreffen (z. B.
+// bei Kommunikation) — jeder ausgewählte Spieler zählt dafür voll, nicht
+// anteilig. Als Eigenfehler zählt alles außer "Unglück" — ein unglücklicher
+// Ballwurf ist kein technischer Fehler, alle anderen Gründe schon.
 function renderMatchStatistik() {
   const container = document.getElementById("match-statistik");
   container.innerHTML = "";
@@ -748,23 +788,78 @@ function renderMatchStatistik() {
     return;
   }
 
+  // ---- Nach Fehlerart (gesamtes Match) ----
   const nachGrund = {};
   for (const f of alleFehler) {
     nachGrund[f.grund] = (nachGrund[f.grund] || 0) + 1;
   }
-  const sortiert = Object.entries(nachGrund).sort((a, b) => b[1] - a[1]);
+  const grundSortiert = Object.entries(nachGrund).sort((a, b) => b[1] - a[1]);
+  const grundMax = grundSortiert[0][1];
 
   const ueberschriftArten = document.createElement("h3");
   ueberschriftArten.textContent = "Fehlerarten (gesamtes Match)";
   container.appendChild(ueberschriftArten);
 
-  const artenListe = document.createElement("div");
-  artenListe.className = "statistik-liste";
-  for (const [grund, anzahl] of sortiert) {
-    artenListe.appendChild(statistikZeile(grund, anzahl));
+  const artenChart = document.createElement("div");
+  artenChart.className = "balken-chart";
+  for (const [grund, anzahl] of grundSortiert) {
+    artenChart.appendChild(balkenZeile(grund, anzahl, grundMax));
   }
-  container.appendChild(artenListe);
+  container.appendChild(artenChart);
 
+  // ---- Pro Spieler: Anzahl + welche Fehlerarten (tabellarisch) ----
+  const proSpieler = {}; // nummer -> { gesamt, nachGrund: {grund: anzahl} }
+  for (const f of alleFehler) {
+    for (const nummer of f.nummern) {
+      if (!proSpieler[nummer]) proSpieler[nummer] = { gesamt: 0, nachGrund: {} };
+      proSpieler[nummer].gesamt++;
+      proSpieler[nummer].nachGrund[f.grund] = (proSpieler[nummer].nachGrund[f.grund] || 0) + 1;
+    }
+  }
+  const spielerSortiert = Object.entries(proSpieler).sort((a, b) => b[1].gesamt - a[1].gesamt);
+  const spielerMax = spielerSortiert[0][1].gesamt;
+
+  const ueberschriftSpielerGrafik = document.createElement("h3");
+  ueberschriftSpielerGrafik.textContent = "Pro Spieler";
+  container.appendChild(ueberschriftSpielerGrafik);
+
+  const spielerChart = document.createElement("div");
+  spielerChart.className = "balken-chart";
+  for (const [nummer, daten] of spielerSortiert) {
+    const rolle = spielerRolle(parseInt(nummer, 10));
+    const rolleKlasse = rolle && ROLLE_ZU_KLASSE[rolle] ? "balken-" + ROLLE_ZU_KLASSE[rolle] : null;
+    spielerChart.appendChild(balkenZeile("#" + nummer, daten.gesamt, spielerMax, rolleKlasse));
+  }
+  container.appendChild(spielerChart);
+
+  const tabelle = document.createElement("table");
+  tabelle.className = "statistik-tabelle";
+  const kopf = document.createElement("tr");
+  for (const text of ["Spieler", "Anzahl", "Fehlerarten"]) {
+    const th = document.createElement("th");
+    th.textContent = text;
+    kopf.appendChild(th);
+  }
+  tabelle.appendChild(kopf);
+  for (const [nummer, daten] of spielerSortiert) {
+    const zeile = document.createElement("tr");
+    const zelleSpieler = document.createElement("td");
+    zelleSpieler.textContent = "#" + nummer;
+    const zelleAnzahl = document.createElement("td");
+    zelleAnzahl.textContent = String(daten.gesamt);
+    const zelleArten = document.createElement("td");
+    zelleArten.textContent = Object.entries(daten.nachGrund)
+      .sort((a, b) => b[1] - a[1])
+      .map(([grund, anzahl]) => grund + " ×" + anzahl)
+      .join(", ");
+    zeile.appendChild(zelleSpieler);
+    zeile.appendChild(zelleAnzahl);
+    zeile.appendChild(zelleArten);
+    tabelle.appendChild(zeile);
+  }
+  container.appendChild(tabelle);
+
+  // ---- Eigenfehler-Anteil ----
   const eigenfehler = alleFehler.filter((f) => f.grund !== "Unglück").length;
   const keinEigenfehler = alleFehler.length - eigenfehler;
 
@@ -792,7 +887,8 @@ function renderFehlerListe() {
     const zeile = document.createElement("div");
     zeile.className = "fehler-zeile";
     const uhrzeit = new Date(eintrag.zeit).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-    zeile.textContent = uhrzeit + " — #" + eintrag.nummer + " — " + eintrag.grund;
+    const nummern = eintrag.nummern.map((n) => "#" + n).join(", ");
+    zeile.textContent = uhrzeit + " — " + nummern + " — " + eintrag.grund;
     liste.appendChild(zeile);
   }
 }

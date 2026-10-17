@@ -10,17 +10,20 @@
   --farbe-erfolg: #166534; /* dunkleres Grün, selbe Begründung */
   --farbe-gefahr: #b91c1c; /* dunkleres Rot, selbe Begründung */
   --farbe-libero: #f59e0b;
-  --farbe-zuspieler-text: #22d3ee;
   --rand-radius: 10px;
+  --court-dunkel: #05070d; /* fast schwarz — Kachel-Grund, die Rolle leuchtet nur noch im Rand */
 
-  /* Eine Farbe je Spieler-Rolle (nicht je Feldposition!) — bleibt beim
-     Spieler, egal wohin er rotiert. Alle Farben geben auf weißem Text
-     mindestens 4,5:1 Kontrast (einzeln geprüft). */
-  --farbe-rolle-aussen: #0f766e; /* Außenangreifer — 2x im Feld */
-  --farbe-rolle-zuspieler: #1e40af; /* Zuspieler — 1x im Feld (klares Blau, nicht mit Mittelblocker-Violett verwechselbar) */
-  --farbe-rolle-mitte: #6d28d9; /* Mittelblocker — 2x im Feld */
-  --farbe-rolle-diagonal: #9d174d; /* Diagonal — 1x im Feld */
-  --farbe-rolle-libero: #854d0e; /* Libero — 1x im Feld (eingetauscht) */
+  /* Eine Neon-Farbe je Spieler-Rolle (nicht je Feldposition!) — bleibt beim
+     Spieler, egal wohin er rotiert. Satz wurde mit dem dataviz-Validator
+     (scripts/validate_palette.js, --mode dark --pairs all) geprüft: alle
+     5 Farben paarweise unterscheidbar (auch bei simulierter Farbenblindheit),
+     nicht nur benachbart — auf dem Feld kann durch die Rotation jede
+     Kombination zweier Rollen nebeneinander stehen. */
+  --farbe-rolle-aussen: #f1099f; /* Außenangreifer — 2x im Feld */
+  --farbe-rolle-zuspieler: #099ed8; /* Zuspieler — 1x im Feld */
+  --farbe-rolle-mitte: #ba33f7; /* Mittelblocker — 2x im Feld */
+  --farbe-rolle-diagonal: #e30d09; /* Diagonal — 1x im Feld */
+  --farbe-rolle-libero: #7409d9; /* Libero — 1x im Feld (eingetauscht); das Icon an der Seite bleibt beim bisherigen Amber */
 }
 
 * {
@@ -317,6 +320,76 @@ select {
   font-size: 0.9rem;
 }
 
+/* ---------- Balkendiagramme (Statistik) ---------- */
+
+.balken-chart {
+  margin-bottom: 0.75rem;
+}
+
+.balken-zeile {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr 2rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.balken-label {
+  font-size: 0.8rem;
+  color: var(--farbe-hinweis);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.balken-spur {
+  background: #000;
+  border-radius: 999px;
+  height: 0.65rem;
+  overflow: hidden;
+}
+
+.balken-fuellung {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--farbe-akzent); /* neutrale Mengen-Farbe, ohne Rollenbezug */
+  transition: width 0.2s;
+}
+
+/* Bei Spieler-Balken: Füllung in der Rollenfarbe dieses Spielers, damit die
+   Statistik dieselbe Farbsprache wie das Spielfeld spricht. */
+.balken-fuellung.balken-rolle-aussen    { background: var(--farbe-rolle-aussen); }
+.balken-fuellung.balken-rolle-zuspieler { background: var(--farbe-rolle-zuspieler); }
+.balken-fuellung.balken-rolle-mitte     { background: var(--farbe-rolle-mitte); }
+.balken-fuellung.balken-rolle-diagonal  { background: var(--farbe-rolle-diagonal); }
+.balken-fuellung.balken-rolle-libero    { background: var(--farbe-rolle-libero); }
+
+.balken-wert {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.statistik-tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.statistik-tabelle th,
+.statistik-tabelle td {
+  text-align: left;
+  padding: 0.4rem 0.3rem;
+  border-bottom: 1px solid #1f2d41;
+}
+
+.statistik-tabelle th {
+  color: var(--farbe-hinweis);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
 .punkt-buttons.ausgeblendet {
   display: none;
 }
@@ -357,30 +430,21 @@ select {
   justify-content: center;
   gap: 0.2rem;
   aspect-ratio: 1;
-  border: none;
+  border: 2px solid #1c2333; /* Fallback, solange keine Rolle gesetzt ist */
   border-radius: var(--rand-radius);
-  background: var(--farbe-flaeche); /* Fallback, solange keine Rolle gesetzt ist */
+  background: var(--court-dunkel);
   color: var(--farbe-text);
+  transition: box-shadow 0.15s, border-color 0.15s;
 }
 
 /* Farbe nach Spieler-Rolle, nicht nach Feldposition — bleibt beim Spieler,
-   egal wohin er rotiert. */
-.court-kachel.rolle-aussen { background: var(--farbe-rolle-aussen); }
-.court-kachel.rolle-zuspieler { background: var(--farbe-rolle-zuspieler); }
-.court-kachel.rolle-mitte { background: var(--farbe-rolle-mitte); }
-.court-kachel.rolle-diagonal { background: var(--farbe-rolle-diagonal); }
-.court-kachel.rolle-libero { background: var(--farbe-rolle-libero); }
-
-/* Aufschlagposition: heller Rand, unabhängig von der Rollenfarbe sichtbar. */
-.court-kachel.aufschlag-position {
-  box-shadow: inset 0 0 0 3px var(--farbe-text);
-}
-
-/* Der Libero ist nur vorübergehend eingetauscht — zusätzlicher Rand macht
-   das deutlich, obendrauf auf die ohnehin eigene Libero-Farbe. */
-.court-kachel.libero-aktiv {
-  box-shadow: inset 0 0 0 4px var(--farbe-libero);
-}
+   egal wohin er rotiert. Die Kachel selbst bleibt dunkel, nur der Rand
+   leuchtet in der Rollenfarbe (Neon-Röhren-Look statt flächiger Farbe). */
+.court-kachel.rolle-aussen    { border-color: var(--farbe-rolle-aussen);    box-shadow: 0 0 9px 1px var(--farbe-rolle-aussen), inset 0 0 6px -2px var(--farbe-rolle-aussen); }
+.court-kachel.rolle-zuspieler { border-color: var(--farbe-rolle-zuspieler); box-shadow: 0 0 9px 1px var(--farbe-rolle-zuspieler), inset 0 0 6px -2px var(--farbe-rolle-zuspieler); }
+.court-kachel.rolle-mitte     { border-color: var(--farbe-rolle-mitte);     box-shadow: 0 0 9px 1px var(--farbe-rolle-mitte), inset 0 0 6px -2px var(--farbe-rolle-mitte); }
+.court-kachel.rolle-diagonal  { border-color: var(--farbe-rolle-diagonal);  box-shadow: 0 0 9px 1px var(--farbe-rolle-diagonal), inset 0 0 6px -2px var(--farbe-rolle-diagonal); }
+.court-kachel.rolle-libero    { border-color: var(--farbe-rolle-libero);    box-shadow: 0 0 9px 1px var(--farbe-rolle-libero), inset 0 0 6px -2px var(--farbe-rolle-libero); }
 
 .court-nummer {
   font-size: 1.6rem;
@@ -399,11 +463,11 @@ select {
 }
 
 .court-markierung-libero {
-  color: var(--farbe-libero);
+  color: var(--farbe-rolle-libero);
 }
 
 .court-markierung-zuspieler {
-  color: var(--farbe-zuspieler-text);
+  color: var(--farbe-rolle-zuspieler);
 }
 
 /* ---------- Libero-Icon an der Seite ---------- */
